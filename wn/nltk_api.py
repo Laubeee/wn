@@ -1,8 +1,7 @@
 
-from typing import Optional, Tuple, List, Dict, Set, Iterator
+from typing import TypeVar, Optional, Tuple, List, Dict, Set, Iterator
 
 import wn as _wn
-from wn._types import LemmatizeFunction as _LemmatizeFunction
 from wn.constants import (
     ADJ,
     ADJ_SAT,
@@ -30,7 +29,7 @@ _ISO639_3_TO_BCP47 = {
     'arb': 'arb',       # Arabic
     'bul': 'bg',        # Bulgarian
     'cat': 'ca',        # Catalan
-    'cmn': 'cmn',       # Mandarin Chinese (simplified implied)
+    'cmn': 'cmn-Hans',  # Mandarin Chinese (simplified implied)
     'dan': 'da',        # Danish
     'ell': 'el',        # Greek
     'eus': 'eu',        # Basque
@@ -41,14 +40,18 @@ _ISO639_3_TO_BCP47 = {
     'heb': 'he',        # Hebrew
     'hrv': 'hr',        # Croatian
     'ind': 'id',        # Indonesian
+    'isl': 'is',        # Icelandic (not in NLTK)
     'ita': 'it',        # Italian
     'jpn': 'ja',        # Japanese
+    'lit': 'lt',        # Lithuanian (not in NLTK)
     'nld': 'nl',        # Dutch
     'nno': 'nn',        # Norwegian (Nynorsk)
     'nob': 'nb',        # Norwegian (Bokmål)
     'pol': 'pl',        # Polish
     'por': 'pt',        # Portuguese
     'qcn': 'cmn-Hant',  # Mandarin Chinese (traditional)
+    'rom': 'ro',        # Romanian (not in NLTK)
+    'slk': 'sk',        # Slovakian (not in NLTK)
     'slv': 'sl',        # Slovenian
     'spa': 'es',        # Spanish
     'swe': 'sv',        # Swedish
@@ -59,11 +62,8 @@ _BCP47_TO_ISO639_3 = dict((b, a) for a, b in _ISO639_3_TO_BCP47.items())
 
 _omw_lex = 'omw-{}:1.4'
 _omw_en = _omw_lex.format('en')
-_LGMAP = {
-    'eng': _omw_en,
-    'fra': _omw_lex.format('fr'),
-    'jpn': _omw_lex.format('ja'),
-}
+_LGMAP = dict((a, _omw_lex.format(b)) for a, b in _ISO639_3_TO_BCP47.items())
+_LGMAP['cmn'] = _omw_lex.format('cmn')  # lex ID is not cmn-Hans
 
 
 _lex: Dict[str, _wn.Wordnet] = {}
@@ -93,126 +93,149 @@ _wn30_no_exc = _get_wn('eng', check_exceptions=False)
 _IC = Dict[str, Dict[int, float]]
 
 
+_T = TypeVar('_T', bound='_WordNetObject')
+
+
 class _WordNetObject:
 
-    def __init__(self, obj: _Relatable):
+    def __init__(self, obj: _Relatable, name: str):
         self._obj = obj
+        self._name = name
 
-    def also_sees(self):
-        return self._obj.get_related('also')
+    def _related(self: _T, relation: str) -> List[_T]:
+        return []
 
-    def attributes(self):
-        return self._obj.get_related('attribute')
+    def also_sees(self: _T) -> List[_T]:
+        return self._related('also')
 
-    def causes(self):
-        return self._obj.get_related('causes')
+    def attributes(self: _T) -> List[_T]:
+        return self._related('attribute')
 
-    def entailments(self):
-        return self._obj.get_related('entails')
+    def causes(self: _T) -> List[_T]:
+        return self._related('causes')
+
+    def entailments(self: _T) -> List[_T]:
+        return self._related('entails')
 
     def frame_ids(self):
         pass
 
-    def hypernyms(self):
-        return self._obj.get_related('hypernym')
+    def hypernyms(self: _T) -> List[_T]:
+        return self._related('hypernym')
 
-    def hyponyms(self):
-        return self._obj.get_related('hyponym')
+    def hyponyms(self: _T) -> List[_T]:
+        return self._related('hyponym')
 
-    def in_region_domains(self):
-        return self._obj.get_related('has_domain_region')
+    def in_region_domains(self: _T) -> List[_T]:
+        return self._related('has_domain_region')
 
-    def in_topic_domains(self):
-        return self._obj.get_related('has_domain_topic')
+    def in_topic_domains(self: _T) -> List[_T]:
+        return self._related('has_domain_topic')
 
-    def in_usage_domains(self):
-        return self._obj.get_related('exemplifies')
+    def in_usage_domains(self: _T) -> List[_T]:
+        return self._related('exemplifies')
 
-    def instance_hypernyms(self):
-        return self._obj.get_related('instance_hypernym')
+    def instance_hypernyms(self: _T) -> List[_T]:
+        return self._related('instance_hypernym')
 
-    def instance_hyponyms(self):
-        return self._obj.get_related('instance_hyponym')
+    def instance_hyponyms(self: _T) -> List[_T]:
+        return self._related('instance_hyponym')
 
-    def member_holonyms(self):
-        return self._obj.get_related('holo_member')
+    def member_holonyms(self: _T) -> List[_T]:
+        return self._related('holo_member')
 
-    def member_meronyms(self):
-        return self._obj.get_related('mero_member')
+    def member_meronyms(self: _T) -> List[_T]:
+        return self._related('mero_member')
 
     def name(self):
         return self._name
 
-    def part_holonyms(self):
-        return self._obj.get_related('holo_part')
+    def part_holonyms(self: _T) -> List[_T]:
+        return self._related('holo_part')
 
-    def part_meronyms(self):
-        return self._obj.get_related('mero_part')
+    def part_meronyms(self: _T) -> List[_T]:
+        return self._related('mero_part')
 
-    def region_domains(self):
-        return self._obj.get_related('domain_region')
+    def region_domains(self: _T) -> List[_T]:
+        return self._related('domain_region')
 
-    def similar_tos(self):
-        return self._obj.get_related('similar')
+    def similar_tos(self: _T) -> List[_T]:
+        return self._related('similar')
 
-    def substance_holonyms(self):
-        return self._obj.get_related('holo_substance')
+    def substance_holonyms(self: _T) -> List[_T]:
+        return self._related('holo_substance')
 
-    def substance_meronyms(self):
-        return self._obj.get_related('mero_substance')
+    def substance_meronyms(self: _T) -> List[_T]:
+        return self._related('mero_substance')
 
-    def topic_domains(self):
-        return self._obj.get_related('domain_topic')
+    def topic_domains(self: _T) -> List[_T]:
+        return self._related('domain_topic')
 
-    def usage_domains(self):
-        return self._obj.get_related('is_exemplified_by')
+    def usage_domains(self: _T) -> List[_T]:
+        return self._related('is_exemplified_by')
 
-    def verb_groups(self):
-        return self._obj.get_related('similar')
+    def verb_groups(self: _T) -> List[_T]:
+        return self._related('similar')
 
 
 class Lemma(_WordNetObject):
-    def __init__(self, obj: _Sense, synset_name: str):
-        super().__init__(obj)
-        self._ss_name = synset_name
+    _obj: _Sense
+
+    def __init__(self, obj: _Sense):
+        super().__init__(obj, obj.word().lemma())
+        self._synset = _get_eng_synset(obj)
 
     def __repr__(self) -> str:
-        return f"Lemma('{self._ss_name}.{self._obj.word().lemma()}')"
+        return f"Lemma('{_synset_name(self._synset)}.{self._name}')"
 
-    def antonyms(self):
-        return self._obj.get_related('antonym')
+    def _related(self, relation: str) -> List['Lemma']:
+        return [Lemma(s) for s in self._obj.get_related(relation)]
 
-    def count(self):
+    def antonyms(self) -> List['Lemma']:
+        return self._related('antonym')
+
+    def count(self) -> int:
         return sum(self._obj.counts())
 
-    def derivationally_related_forms(self):
-        return self._obj.get_related('derivation')
+    def derivationally_related_forms(self) -> List['Lemma']:
+        return self._related('derivation')
 
     def frame_strings(self):
         return self._obj.frames()
 
     def key(self):
-        pass
+        return Lemma(self._obj.metadata().get('identifier'))
 
     def lang(self):
-        return self._obj.lexicon().language
+        return _BCP47_TO_ISO639_3[self._obj.lexicon().language]
 
-    def pertainyms(self):
-        return self._obj.get_related('pertainym')
+    def pertainyms(self) -> List['Lemma']:
+        return self._related('pertainym')
 
     def synset(self):
-        return Synset(self._obj.synset())
+        return Synset(self._synset)
 
-    def syntactic_marker(self):
-        pass
+    def syntactic_marker(self) -> Optional[str]:
+        adjpos = self._obj.adjposition()
+        return f'({adjpos})' if adjpos else None
+
+
+def _get_eng_synset(sense: _Sense) -> _Synset:
+    # assumes the english synset always exists
+    return next(iter(_wn30.synsets(ili=sense.synset().ili.id)))
 
 
 class Synset(_WordNetObject):
+    _obj: _Synset
+
     def __init__(self, obj: _Synset):
-        super().__init__(obj)
+        super().__init__(obj, _synset_name(obj))
 
     def __repr__(self) -> str:
-        return f"Synset('{_synset_name(self._obj)}')"
+        return f"Synset('{self._name}')"
+
+    def _related(self, relation: str) -> List['Synset']:
+        return [Synset(ss) for ss in self._obj.get_related(relation)]
 
     def acyclic_tree(self):
         pass
@@ -224,7 +247,7 @@ class Synset(_WordNetObject):
         common = _taxonomy.common_hypernyms(self._obj, other._obj, simulate_root=False)
         return [Synset(synset) for synset in common]
 
-    def definition(self) -> str:
+    def definition(self) -> Optional[str]:
         return self._obj.definition()
 
     def examples(self) -> List[str]:
@@ -237,13 +260,18 @@ class Synset(_WordNetObject):
         paths = _taxonomy.hypernym_paths(self._obj, simulate_root=False)
         return [[Synset(ss) for ss in path] for path in paths]
 
-    def lemma_names(self):
-        return self._obj.lemmas()
+    def lemma_names(self, lang: str = 'eng') -> List[str]:
+        return [lemma.name() for lemma in self.lemmas(lang=lang)]
 
-    def lemmas(self):
-        return [Lemma(sense) for sense in self._obj.senses()]
+    def lemmas(self, lang: str = 'eng') -> List[Lemma]:
+        wn = _get_wn(lang)
+        sslist = wn.synsets(ili=self._obj.ili.id)
+        if sslist:
+            return [Lemma(sense) for sense in sslist[0].senses()]
+        else:
+            return []
 
-    def lexname(self):
+    def lexname(self) -> Optional[str]:
         return self._obj.lexfile()
 
     def lowest_common_hypernyms(self):
@@ -322,8 +350,8 @@ def ss2of(ss: Synset, lang: str = None) -> str:
 
 
 def langs() -> List[str]:
-    return [_BCP47_TO_ISO639_3.get(lex.language, lex.language)
-            for lex in _wn.lexicons(lexicon=_omw_lex.format('*'))]
+    return sorted(set(_BCP47_TO_ISO639_3.get(lex.language, lex.language)
+                      for lex in _wn.lexicons(lexicon=_omw_lex.format('*'))))
 
 
 def get_version() -> str: return NotImplemented
@@ -351,14 +379,7 @@ def synsets(
 
 def lemmas(lemma: str, pos: str = None, lang: str = 'eng') -> List[Lemma]:
     wn = _get_wn(lang)
-    if lang == 'eng':
-        return [Lemma(s, _synset_name(s.synset()))
-                for s in wn.senses(form=lemma, pos=pos)]
-    else:
-        senses = wn.senses(form=lemma, pos=pos)
-        ss_names = [_synset_name(_wn30.synsets(ili=s.synset().ili.id)[0])
-                    for s in senses]
-        return [Lemma(s, name) for s, name in zip(senses, ss_names)]
+    return [Lemma(s) for s in wn.senses(form=lemma, pos=pos)]
 
 
 def all_lemma_names(pos: str = None, lang: str = 'eng') -> Iterator[str]:
@@ -367,7 +388,8 @@ def all_lemma_names(pos: str = None, lang: str = 'eng') -> Iterator[str]:
 
 
 def all_synsets(pos: str = None) -> Iterator[Synset]:
-    pass
+    for ss in _wn30.synsets(pos=pos):
+        yield Synset(ss)
 
 
 def words(lang: str = 'eng') -> Iterator[str]:
